@@ -6,6 +6,8 @@ For each chapter, we generate the sections
 The sections are then developed into multiple key points
 It is those key points that are finally used to generate the full paragraphs of the book.
 
+![Screenshot of the UI](screenshot.png)
+
 In order use of this project, don't forget to add you OpenAI API key at the root of the project in the file ".env", containing the following line:
 VUE_APP_OPENAI_API_KEY='sk-rcz....'
 
