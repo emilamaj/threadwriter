@@ -74,7 +74,7 @@ h1 {
   font-size: 1.1em;
   color: #2c3e50;
   border: 3px grey solid;
-
+  padding: 0 0.5em;
 }
 
 .input-field-multi {
@@ -84,6 +84,7 @@ h1 {
   color: #2c3e50;
   border: 3px grey solid;
   resize: vertical;
+  padding: 0.5em;
 }
 
 </style>

@@ -349,6 +349,10 @@ export default {
     margin-bottom: 5px;
 }
 
+.tree-viewer-div {
+    padding: 20px;
+}
+
 .tree-viewer-box {
     background-color: white;
     font-size: 1em;
