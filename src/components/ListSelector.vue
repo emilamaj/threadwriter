@@ -10,7 +10,6 @@
     </div>
     <div class="arrows">
       <button class="arrow-right" @click="moveRight">&gt;</button>
-      <br />
       <button class="arrow-left" @click="moveLeft">&lt;</button>
     </div>
     <div class="pane">
@@ -58,11 +57,10 @@ export default {
 };
 </script>
 
-<style>
+<style scoped>
 .list-selector-div {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: row;
   padding: 20px;
 }
 
@@ -76,10 +74,22 @@ export default {
 }
 
 .arrows {
+  margin: 0 10px;
+  padding-top: 1em;
+  height: auto;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  margin: 0 10px;
+  justify-content: space-evenly;
+}
+
+button {
+  /* font-weight: bold; */
+  font-size: 1.5em;
+  color: rgb(70, 70, 70);
+  border: 1px solid grey;
+  border-radius: 5px;
+  background-color: white;
+  cursor: pointer;
 }
 
 .pane .description {

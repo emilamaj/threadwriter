@@ -15,8 +15,8 @@
                     </div>
 
                     <template v-if='displaySummaries[i][j]'>
-                        <div class="summary-div" v-for="summary in summaries[i][j]" :key="summary">
-                            <p class="summary-label"> {{ summary }} </p>
+                        <div class="summary-div" v-for="(summary,k) in summaries[i][j]" :key="summary">
+                            <p class="summary-label" @click="selectSummary(i,j,k)" :style="(currentChapter===i && currentSection===j && currentSummary===k) ? selectedStyle:unselectedStyle"> {{ summary }} </p>
                         </div>
                     </template>
                 </div>
@@ -35,6 +35,7 @@ export default {
             displaySummaries: [],
             currentChapter: null,
             currentSection: null,
+            currentSummary: null,
             selectedStyle: { "background-color": "skyblue", "color": "white"},
             unselectedStyle: { "background-color": "", "color": "black"}
         }
@@ -58,14 +59,12 @@ export default {
                 return []
             }
         },
+        summarySelectable: {
+            type: Boolean,
+            default: false
+        }
     },
     methods: {
-        selectSection(chapterIndex, sectionIndex) {
-            // Update the current chapter and section
-            this.currentChapter = chapterIndex;
-            this.currentSection = sectionIndex;
-            this.$emit('sectionSelected', {"chapterIndex":chapterIndex, "sectionIndex":sectionIndex});
-        },
         toggleChapter(chapterIndex) {
             // Toggle the display of the sections of a given chapter
             this.displaySections[chapterIndex] = !this.displaySections[chapterIndex];
@@ -73,6 +72,27 @@ export default {
         toggleSection(chapterIndex, sectionIndex) {
             // Toggle the display of the summaries of a given section
             this.displaySummaries[chapterIndex][sectionIndex] = !this.displaySummaries[chapterIndex][sectionIndex];
+        },
+        selectSection(chapterIndex, sectionIndex) {
+            if (!this.summarySelectable) {
+                // If summarySelectable is false, select the section
+                this.currentChapter = chapterIndex;
+                this.currentSection = sectionIndex;
+                this.$emit('sectionSelected', {"chapterIndex":chapterIndex, "sectionIndex":sectionIndex});
+            }
+        },
+        selectSummary(chapterIndex, sectionIndex, summaryIndex) {
+            if (this.summarySelectable) {
+                // Select the target summary
+                this.currentChapter = chapterIndex;
+                this.currentSection = sectionIndex;
+                this.currentSummary = summaryIndex;
+                this.$emit('summarySelected', {"chapterIndex":chapterIndex, "sectionIndex":sectionIndex, "summaryIndex":summaryIndex});
+            } else {
+                // Select the section of the target summary
+                this.selectSection(chapterIndex, sectionIndex);
+            }
+
         },
     },
     watch: {
@@ -141,7 +161,7 @@ export default {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    transform: translate(2em, 0);
+    transform: translate(1.5em, 0);
 }
 
 .section-title {
@@ -163,7 +183,7 @@ export default {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    transform: translate(2em, 0);
+    transform: translate(1.5em, 0);
 }
 
 .summary-label {

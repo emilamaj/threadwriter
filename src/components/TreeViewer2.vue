@@ -107,7 +107,7 @@ export default {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    transform: translate(2em, 0);
+    transform: translate(1.5em, 0);
 }
 
 .section-label {
