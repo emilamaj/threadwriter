@@ -16,6 +16,10 @@
     <div class="summaries-div">
       <summary-generator :bookTitle="bookTitle" :bookGoal="bookGoal" :bookChapters="bookChapters" :bookSections="bookSections" :bookSummaries="bookSummaries" @summaryUpdate="summaryUpdate" @summaryOverwrite="summaryOverwrite"/>
     </div>
+    <hr class="separator">
+    <div class="contents-div">
+      <content-generator :bookTitle="bookTitle" :bookGoal="bookGoal" :bookChapters="bookChapters" :bookSections="bookSections" :bookSummaries="bookSummaries" :bookContents="bookContents" @contentUpdate="contentUpdate" @contentOverwrite="contentOverwrite"/>
+    </div>
   </div>
 </template>
 
@@ -24,6 +28,7 @@ import BookDetails from './components/BookDetails.vue'
 import ChapterGenerator from './components/ChapterGenerator.vue'
 import SectionGenerator from './components/SectionGenerator.vue'
 import SummaryGenerator from './components/SummaryGenerator.vue'
+import ContentGenerator from './components/ContentGenerator.vue'
 
 export default {
   name: 'App',
@@ -32,6 +37,7 @@ export default {
     ChapterGenerator,
     SectionGenerator,
     SummaryGenerator,
+    ContentGenerator,
   },
   data() {
     return {
@@ -56,6 +62,21 @@ export default {
         [
           ["Tiramisu","Baklava","Greek yogurt with honey","Greek yogurt with honey and walnuts","Greek yogurt with honey and almonds"],
           ["Crème brûlée","Cannoli","Croissants","Macarons","Choux pastry","Éclairs","Profiteroles"],
+        ],
+      ],
+      bookContents: [ // Contains the content corresponding to the summaries of the sections of the book
+        [
+          ["Paragraph about the background of the author","Some comments of the author","Smth bt the editor","Book intro paragraph"]
+        ],
+        [
+          ["a","b","c","",""],
+        ],
+        [
+          ["","","","",""],
+        ],
+        [
+          ["","","","",""],
+          ["","","","","","",""],
         ],
       ]
     }
@@ -82,7 +103,13 @@ export default {
     },
     summaryOverwrite(data) {
       this.bookSummaries = data;
-    }
+    },
+    contentUpdate(data) {
+      this.bookContents[data.chapterIndex][data.sectionIndex][data.contentIndex] = data.contents;
+    },
+    contentOverwrite(data) {
+      this.bookContents = data;
+    },
   },
 }
 </script>
@@ -125,6 +152,12 @@ export default {
 }
 
 .summaries-div {
+  /* margin-top: 10px; */
+  background-color: lightgray;
+  width: 100%;
+}
+
+.contents-div {
   /* margin-top: 10px; */
   background-color: lightgray;
   width: 100%;
