@@ -140,7 +140,7 @@ We perform the same cleanup operation for the following list (we make sure that 
         // Add the new chapters to the selectedChapters array
         console.log("Incoming Data:", data)
         this.previousSelectedChapters = [...this.selectedChapters]
-        this.$refs.undoButton.disabled = false
+        // this.$refs.undoButton.disabled = false // This is not needed because the button is enabled in the finally block (it seems)
         this.selectedChapters = [];
         // Split the returned text by line breaks
         data.choices[0].text.split("\n").forEach(chapter => {
@@ -164,34 +164,51 @@ We perform the same cleanup operation for the following list (we make sure that 
       // Restore the selectedChapters array to its previous state
       this.selectedChapters = [...this.previousSelectedChapters]
     },
+    _chapterGenPayload(title, goal, chapterList) {
+      // This function creates the payload for the OpenAI API call
+      // It takes the book title, the book goal and the list of chapters as input
+      // It returns the payload object to be given to fetch(url, payload)
+
+      let apiKey = process.env.VUE_APP_OPENAI_API_KEY
+
+      // Create the prompt
+      let chapterPrompt = `This book is called "${title}". The goal is to ${goal}.\n\nHere is the list of the titles of the chapters of the book:\n`
+      chapterList.forEach((chapter, i) => {
+        chapterPrompt += `Chapter ${i+1}. ${chapter}\n`
+      })
+      chapterPrompt += `Chapter ${chapterList.length+1}.`
+      console.log("Sending chapter prompt:", chapterPrompt)
+      // Here the data obejct
+      let data = {
+        "prompt": chapterPrompt,
+        "max_tokens": 500,
+        "temperature": 0.0,
+        "frequency_penalty": 0.4,
+        "presence_penalty": 0.1,
+        "stop": ["This book is called", "The goal is to", "Here is the list", "Chapter 1."]
+      }
+
+      // Header object
+      let headers = {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      }
+
+      let payload = {
+        method: "POST",
+        headers: headers,
+        body: JSON.stringify(data)
+      }
+
+      return payload
+    },
     generateChapters() {
       // This function make a call to the OpenAI Text completion API
       // It will generate a list of chapters based on the book title and goal
       // The generated chapters will be added to the generatedChapters array
 
       let url = "https://api.openai.com/v1/engines/davinci/completions"
-      let apiKey = process.env.VUE_APP_OPENAI_API_KEY
-
-      // Create the prompt
-      let chapterPrompt = `This book is called "${this.bookTitle}". The goal is to ${this.bookGoal}.\n\nHere is the list of the titles of the chapters of the book:\n`
-      this.selectedChapters.forEach((chapter, i) => {
-        chapterPrompt += `Chapter ${i+1}. ${chapter}\n`
-      })
-      chapterPrompt += `Chapter ${this.selectedChapters.length+1}.`
-
-      // Here is the OpenAI API call
-      let data = {
-        "prompt": chapterPrompt,
-        "max_tokens": 500,
-        "temperature": 0.3,
-        "frequency_penalty": 0.4,
-        "presence_penalty": 0.1,
-        "stop": ["This book is called", "The goal is to", "Here is"]
-      }
-      let headers = {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-      }
+      let payload = this._chapterGenPayload(this.bookTitle, this.bookGoal, this.selectedChapters)
 
       // Make sure the generate button text is changed to "Generating..." and the buttons are not clickable:
       this.$refs.generateButton.innerText = "Generating..."
@@ -200,12 +217,7 @@ We perform the same cleanup operation for the following list (we make sure that 
       this.$refs.undoButton.disabled = true
 
       // Make the API call
-      console.log("Sending prompt:", chapterPrompt)
-      fetch(url, {
-        method: "POST",
-        headers: headers,
-        body: JSON.stringify(data)
-      })
+      fetch(url, payload)
       .then(response => {
         if (!response.ok) {
           throw new Error("Fetch error");
@@ -286,6 +298,10 @@ h1 {
   border: 3px grey solid;
   border-radius: 5px;
   background-color: white;
+  
+  /* When hovering */
+  transition: 0.3s;
+  cursor: pointer;
 }
 
 </style>
