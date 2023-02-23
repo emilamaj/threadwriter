@@ -1,7 +1,7 @@
 <template>
     <div class="content-generator-div">
         <p class="label-main">Generate piece of content:</p>
-        <p class="label-info">Click on a summary to view content. Generate </p>
+        <p class="label-info">Click on a summary to edit/generate content</p>
 
         <div class="content-div">
             <div class="tree-viewer-div">
@@ -10,13 +10,12 @@
                     <tree-viewer-3 :chapters="bookChapters" :sections="bookSections" :summaries="bookSummaries" :summarySelectable="true" @summarySelected="summarySelected"/>
                 </div>
             </div>
-            <paragraph-viewer :paragraph="selectedContent" @paragraphChange="paragraphChange"/>
+            <paragraph-viewer class="paragraph-viewer-box" :paragraph="selectedContent" @paragraphChange="paragraphChange"/>
         </div>
         <div class="generation-control-div">
-            <button class="general-button" @click="cleanSummaries" ref="cleanButton">Clean Elements</button>
-            <button class="general-button" @click="undoCleanup" ref="undoButton" disabled="true">Undo Cleanup</button>
-            <button class="general-button" @click="generateSummaries" ref="generateButton">Generate Elements</button>
-            <button class="general-button" @click="autoGenSummaries" ref="autoButton">Auto</button>
+            <button class="general-button" @click="undoGen" ref="undoButton" disabled="true">Undo Last Gen.</button>
+            <button class="general-button" @click="generateContent" ref="generateButton">Generate Elements</button>
+            <button class="general-button" @click="autoGenContent" ref="autoButton">Auto</button>
         </div>
 </div>
 </template>
@@ -26,7 +25,7 @@ import ParagraphViewer from './ParagraphViewer.vue'
 import TreeViewer3 from './TreeViewer3.vue'
 
 export default {
-  name: 'SectionGenerator',
+  name: 'ContentGenerator',
   components: {
     TreeViewer3,
     ParagraphViewer,
@@ -89,6 +88,7 @@ export default {
     },
     paragraphChange(paragraph) {
         // Event triggered in the paragraph viewer when the paragraph is changed by the user
+        console.log("Paragraph change:", paragraph);
         this.selectedContent = paragraph
     },
     undoGen() {
@@ -100,12 +100,11 @@ export default {
         // A summary is a short text that summarizes the content of an element of a section
         // For example, in a chapter about Pastas, the section about the shapes of pasta addresses elements of content best summarized as "Fusilli, Penne, Spaghetti, etc."
 
-        let payload = this._contentGenPayload(this.bookTitle, this.bookGoal, this.bookChapters, this.bookSections, this.currentChapter, this.currentSection, this.selectedSummaries)
+        let payload = this._contentGenPayload(this.bookTitle, this.bookGoal, this.bookChapters, this.bookSections, this.bookSummaries, this.currentChapter, this.currentSection, this.currentSummary)
 
         // Make sure the generate button text is changed to "Generating..." and the buttons are not clickable:
         this.$refs.generateButton.innerText = "Generating..."
         this.$refs.generateButton.disabled = true
-        this.$refs.cleanButton.disabled = true
         this.$refs.undoButton.disabled = true
         this.$refs.autoButton.disabled = true
 
@@ -120,15 +119,8 @@ export default {
         })
         .then(data => {
             console.log("Incoming Data: ", data)
-            this.generatedSummaries = [];
-            data.choices[0].text.split("\n").forEach(summary => {
-                if (summary != "") {
-                    let newSum = summary.replace(/\d+- /, "").trim()
-                    if (!this.generatedSummaries.includes(newSum)) {
-                        this.generatedSummaries.push(newSum)
-                    }
-                }
-            })
+            let generatedContent = data.choices[0].text
+            this.selectedContent = generatedContent
         })
         .catch(error => {
             console.error("Error when calling the OpenAI API: ", error)
@@ -137,133 +129,128 @@ export default {
             // Make sure the generate button text is changed back to "Generate" and the buttons are clickable again:
             this.$refs.generateButton.innerText = "Generate Elements"
             this.$refs.generateButton.disabled = false
-            this.$refs.cleanButton.disabled = false
             this.$refs.undoButton.disabled = false
             this.$refs.autoButton.disabled = false
         })
     },
     autoGenContent() {
-        // This function generates the summaries for every section of every chapter of the book
-        // It is used to generate the summaries for the book in one go
+        // This function automatically generates the content for the entire book
+        // It separates each call by 3 seconds to avoid hitting the API limit
+        // The progress is displayed in the text of the "auto" button
 
-        let reuse = false
-
-        // Make sure the buttons are not clickable:
+        // Update UI
         this.$refs.generateButton.disabled = true
-        this.$refs.cleanButton.disabled = true
         this.$refs.undoButton.disabled = true
         this.$refs.autoButton.disabled = true
+        this.$refs.autoButton.innerText = "Auto (0%)"
 
-        let chapterSectionFlatIndex = []
-        let summaryPromises = []
-        this.bookChapters.forEach((chapter, chapterIndex) => {
-            this.bookSections[chapterIndex].forEach((section, sectionIndex) => {
-                // Create the payload
-                let payload = this._summaryGenPayload(this.bookTitle, this.bookGoal, this.bookChapters, this.bookSections, chapterIndex, sectionIndex, reuse?this.bookSummaries[chapterIndex][sectionIndex]:null)
-                
-                // Make the API call
-                let url = "https://api.openai.com/v1/engines/davinci/completions"
-                summaryPromises.push(fetch(url, payload))
-                chapterSectionFlatIndex.push([chapterIndex, sectionIndex])
-            })
-        })
-        Promise.all(summaryPromises)
-        .then(responses => {
-            
-            responses.forEach(response => {
+        // Go through each chapter, section and summary
+        let payloads = []
+        for (let i=0; i<this.bookChapters.length; i++) {
+            for (let j=0; j<this.bookSections[i].length; j++) {
+                for (let k=0; k<this.bookSummaries[i][j].length; k++) {
+                    // Generate the payload for the current call
+                    let payload = this._contentGenPayload(this.bookTitle, this.bookGoal, this.bookChapters, this.bookSections, this.bookSummaries, i, j, k)
+                    payloads.push({data:payload, chapter:i, section:j, summary:k})
+                }
+            }
+        }
+
+        // Make the calls, separated by 3 seconds. Cancel all the call if any fails
+        let url = "https://api.openai.com/v1/engines/davinci/completions"
+        let counter = 0
+        let interval = setInterval(() => {
+            // Make the API call
+            fetch(url, payloads[counter].data)
+            .then(response => {
                 if (!response.ok) {
                     throw new Error("Network response was not ok.")
                 }
+                return response.json()
             })
-            return Promise.all(responses.map(response => response.json()))
-        })
-        .then(responses => {
-            // Copy the shape of bookSections
-            let newBookSummaries = this.bookSections.map(chapter => chapter.map(() => []))
-
-            responses.forEach((data, index) => {
+            .then(data => {
                 console.log("Incoming Data: ", data)
-                console.log("newBookSummaries: ", newBookSummaries)
-                console.log("this.bookSummaries: ", this.bookSummaries)
-                // Retrieve the indices pair
-                let [chapterIndex, sectionIndex] = chapterSectionFlatIndex[index]
-                
-                // Craft the list of summaries depending on wether we reused the already generated ones
-                let fullText
-                if (reuse) {
-                    fullText = this.bookSummaries[chapterIndex][sectionIndex].join("\n")
-                    fullText += `\n${this.bookSummaries.length + 1}-`
-                }else{
-                    fullText = "1-"
-                }
-                fullText += data.choices[0].text
-                
-                fullText.split("\n").forEach(summary => {
-                    if (summary != "") {
-                        let newSum = summary.replace(/\d+- /, "").trim()
-                        if (!newBookSummaries[chapterIndex][sectionIndex].includes(newSum)) {
-                            newBookSummaries[chapterIndex][sectionIndex].push(newSum)
-                        }
-                    }
+                let generatedContent = data.choices[0].text
+
+                // Update the book content
+                this.$emit('contentUpdate', {
+                    chapterIndex: payloads[counter].chapter,
+                    sectionIndex: payloads[counter].section,
+                    summaryIndex: payloads[counter].summary,
+                    contents: generatedContent
                 })
+
+                // Update UI
+                counter += 1
+                this.$refs.autoButton.innerText = `Auto (${Math.floor(counter/payloads.length*100)}%)`
             })
-            this.$emit('summaryOverwrite', newBookSummaries)
-        })
-        .catch(error => {
-            console.error("Error when calling the OpenAI API: ", error)
-        })
-        .finally(() => {
-            // Make sure the buttons are clickable again:
-            this.$refs.generateButton.disabled = false
-            this.$refs.cleanButton.disabled = false
-            this.$refs.undoButton.disabled = false
-            this.$refs.autoButton.disabled = false
-        })
+            .catch(error => {
+                console.error("Error when calling the OpenAI API: ", error)
+                counter = payloads.length // Fulfill the final condition to stop the interval
+            })
+            .finally(() => {
+                if (counter === payloads.length) {
+                    clearInterval(interval)
+                    // Update UI
+                    this.$refs.generateButton.disabled = false
+                    this.$refs.undoButton.disabled = false
+                    this.$refs.autoButton.disabled = false
+                    this.$refs.autoButton.innerText = "Auto"
+                }
+            })
+        }, 3000)
+
     },
-    updateSummaries(){
+    updateContent(){
         // Called whenever the user changes the selected summary
-        this.$emit('summaryUpdate', {
+        this.$emit('contentUpdate', {
             chapterIndex: this.currentChapter,
             sectionIndex: this.currentSection,
-            summaries: this.selectedSummaries
+            contentIndex: this.currentSummary,
+            contents: this.selectedContent
         })
     },
-    _contentGenPayload(title, goal, chapterList, sectionList, targetChapterIndex, targetSectionIndex, summaryList){
+    _contentGenPayload(title, goal, chapterList, sectionList, summaryList, targetChapterIndex, targetSectionIndex, targetSummaryIndex){
         // This function creates the payload for the OpenAI Text completion API
 
         let apiKey = process.env.VUE_APP_OPENAI_API_KEY
 
         // Create the prompt
+        // Start with the information about the book
         let summaryPrompt = `This book is called ${title}.\n`
         summaryPrompt += `The goal is to ${goal}.\n\n`
-        summaryPrompt += `Here is a list of the chapter names:\n`
+        // Add the list of chapters
+        summaryPrompt += `Chapter List:\n`
         chapterList.forEach((chapter,index) => {
             summaryPrompt += `Chapter ${index + 1}. ${chapter}\n`
         })
-        summaryPrompt += `\nHere is a list of all the sections in Chapter ${targetChapterIndex + 1}. ${chapterList[targetChapterIndex]} :\n`
+        // Add the list of sections
+        summaryPrompt += `\nSections in Chapter ${targetChapterIndex + 1}. ${chapterList[targetChapterIndex]} :\n`
         sectionList[targetChapterIndex].forEach((section,index) => {
             summaryPrompt += `Section ${index + 1}. ${section}\n`
         })
-        summaryPrompt += `\nHere is a list of all the points addressed in Section ${targetSectionIndex+1}. ${sectionList[targetChapterIndex][targetSectionIndex]} :\n`
-        if (summaryList != null) {
-            summaryList.forEach((summary,index) => {
-                summaryPrompt += `${index + 1}- ${summary}\n`
-            })
-            summaryPrompt += `${summaryList.length + 1}-`
-        }else{
-            summaryPrompt += "1-"
-        }
+        // Add the list of summaries of the target section
+        summaryPrompt += `\nPoints addressed in Section ${targetSectionIndex+1}. ${sectionList[targetChapterIndex][targetSectionIndex]} :\n`
+        summaryList[targetChapterIndex][targetSectionIndex].forEach((summary,index) => {
+            summaryPrompt += `${index + 1}- ${summary}\n`
+        })
+            
+        // Add the prompt to make it generate the content 
+        summaryPrompt += "\nThe following is taken right from the book and given for free in its entierty\n"
+        summaryPrompt += `Title: ${targetSummaryIndex+1}. ${summaryList[targetChapterIndex][targetSectionIndex][targetSummaryIndex]}\n`
+        summaryPrompt += `The summary corresponds to the following 5 paragraphs:\n`
+
         
         console.log("Preparing prompt: ", summaryPrompt)
         
         // Here is the OpenAI API call
         let data = {
             "prompt": summaryPrompt,
-            "max_tokens": 500,
+            "max_tokens": 1500,
             "temperature": 0.3,
             "frequency_penalty": 0.4,
             "presence_penalty": 0.1,
-            "stop": ["This book is called", "The goal is to", "Here is"]
+            "stop": ["This book is called", "The goal is to"]
         }
         let headers = {
             "Content-Type": "application/json",
@@ -279,9 +266,9 @@ export default {
     }
   },
     watch: {
-        selectedSummaries: {
+        selectedContent: {
             handler: function () {
-                this.updateSummaries()
+                this.updateContent()
             },
             deep: true
         }
@@ -331,6 +318,14 @@ export default {
     overflow: auto;
     border: 3px grey dotted;
     padding: 5px;
+}
+
+.paragraph-viewer-box {
+    /* background-color: white; */
+    /* font-size: 1em; */
+    /* overflow: auto; */
+    /* border: 3px grey dotted; */
+    /* padding: 5px; */
 }
 
 </style>
