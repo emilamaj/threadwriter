@@ -6,7 +6,7 @@
     </div>
     <hr class="separator">
     <div class="chapters-div">
-      <chapter-generator :bookTitle="bookTitle" :bookGoal="bookGoal" @chapterUpdate="chapterUpdate"/>
+      <chapter-generator :bookTitle="bookTitle" :bookGoal="bookGoal" :bookChapters="bookChapters" @chapterUpdate="chapterUpdate"/>
     </div>
     <hr class="separator">
     <div class="sections-div">
@@ -43,11 +43,8 @@ export default {
     return {
       bookTitle: "Mediterranean Cuisine For Beginners: A Cookbook",
       bookGoal: "allow the reader to master mediterranean cuisine, even with little cooking experience",
-      bookChapters: ["Introduction","Soups and starters","Pastas","Deserts"],
-      bookSections: [["Words from the author"],
-      ["Italian soups"],
-      ["Pasta Shapes"],
-      ["Italian deserts"]],
+      bookChapters: ["Introduction", "Soups and starters", "Pastas", "Deserts"],
+      bookSections: [["Words from the author"], ["Italian soups"], ["Pasta Shapes"], ["Italian deserts"]],
       // Contains the summaries of the sections of the book
       bookSummaries: [
         [

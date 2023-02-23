@@ -8,7 +8,7 @@
             </div>
             
             <div class="section-div" v-if='displayChildren[i]'>
-                <p class="section-label" v-for="section in sections[i]" :key="section"> {{ section }} </p>
+                <p class="section-label" v-for="section in sections[i]" :key="section" @click=selectChapter(i)> {{ section }} </p>
             </div>
         </div>
     </div>
@@ -116,6 +116,7 @@ export default {
     padding: 0;
     margin: 0;
     white-space: nowrap;
+    cursor: pointer;
 }
 
 </style>

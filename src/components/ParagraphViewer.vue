@@ -22,7 +22,6 @@ export default {
     },
     methods: {
         updateParagraph() {
-            console.log("Paragraph change:", this.currentParagraph);
             this.$emit("paragraphChange", this.currentParagraph);
         },
     },

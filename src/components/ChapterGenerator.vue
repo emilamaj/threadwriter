@@ -26,13 +26,17 @@ export default {
     bookGoal: {
       type: String,
       default: "allow the reader to master mediterranean cuisine, even with little cooking experience"
+    },
+    bookChapters: {
+      type: Array,
+      default: () => ["Introduction","Soups and starters","Pastas","Deserts"]
     }
   },
   data() {
     return {
       selectedChapters: [],
       previousSelectedChapters: [],
-      generatedChapters: ["Introduction", "Following the intro", "Another chapter", "Some domain", "A chapter about something", "Last chapter"]
+      generatedChapters: ["Another chapter", "A chapter about something", "Last chapter"]
     }
   },
   methods: {
@@ -257,14 +261,18 @@ We perform the same cleanup operation for the following list (we make sure that 
         this.$emit('chapterUpdate', this.selectedChapters) 
     }
   },
-    watch: {
-        selectedChapters: {
-        handler: function() {
-            this.updateChapters()
-        },
-        deep: true
-        }
-    }
+  watch: {
+      selectedChapters: {
+      handler: function() {
+          this.updateChapters()
+      },
+      deep: true
+      }
+  },
+  mounted() {
+    // When the component is mounted, we update the chapters
+    this.selectedChapters = this.bookChapters
+  }
 }
 </script>
 
