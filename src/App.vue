@@ -1,6 +1,6 @@
 <template>
-  
   <div id="app">
+
     <div class="details-div">
       <book-details @detailsUpdate="detailsUpdate"/>
     </div>
