@@ -168,7 +168,7 @@ We perform the same cleanup operation for the following list (we make sure that 
       // Restore the selectedChapters array to its previous state
       this.selectedChapters = [...this.previousSelectedChapters]
     },
-    _chapterGenPayload(title, goal, chapterList) {
+    _chapterGenPayload(title, goal) {
       // This function creates the payload for the OpenAI API call
       // It takes the book title, the book goal and the list of chapters as input
       // It returns the payload object to be given to fetch(url, payload)
@@ -176,27 +176,29 @@ We perform the same cleanup operation for the following list (we make sure that 
       let apiKey = process.env.VUE_APP_OPENAI_API_KEY
 
       // Create the prompt
-      let chapterPrompt = `This book is called "${title}". The goal is to ${goal}.\n\nHere is the list of the titles of the chapters of the book:\n`
-      chapterList.forEach((chapter, i) => {
-        chapterPrompt += `Chapter ${i+1}. ${chapter}\n`
-      })
-      chapterPrompt += `Chapter ${chapterList.length+1}.`
-      console.log("Sending chapter prompt:", chapterPrompt)
-      // Here the data obejct
-      let data = {
-        "prompt": chapterPrompt,
-        "max_tokens": 500,
-        "temperature": 0.0,
-        "frequency_penalty": 0.4,
-        "presence_penalty": 0.1,
-        "stop": ["This book is called", "The goal is to", "Here is the list", "Chapter 1."]
-      }
+      let chapterPrompt = `This book is called "${title}". The goal of the book is to ${goal}.\n`
+      chapterPrompt += "Write the list of chapters for this book in the following format:\n"
+      chapterPrompt += "Chapter 1. First chapter\n"
+      chapterPrompt += "Chapter 2. Second chapter\n"
 
+      console.log("Sending chapter prompt:", chapterPrompt)
+
+      let model = "gpt-3.5-turbo"
+      let messages = [{"role": "user", "content": chapterPrompt}]
       // Header object
       let headers = {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${apiKey}`,
       }
+
+      // Here the data obejct
+      let data = {
+        "model": model,
+        "messages": messages,
+        "max_tokens": 750,
+        "temperature": 0.3,
+      }
+
 
       let payload = {
         method: "POST",
@@ -211,8 +213,8 @@ We perform the same cleanup operation for the following list (we make sure that 
       // It will generate a list of chapters based on the book title and goal
       // The generated chapters will be added to the generatedChapters array
 
-      let url = "https://api.openai.com/v1/engines/davinci/completions"
-      let payload = this._chapterGenPayload(this.bookTitle, this.bookGoal, this.selectedChapters)
+      let url = "https://api.openai.com/v1/chat/completions"
+      let payload = this._chapterGenPayload(this.bookTitle, this.bookGoal)
 
       // Make sure the generate button text is changed to "Generating..." and the buttons are not clickable:
       this.$refs.generateButton.innerText = "Generating..."
@@ -232,8 +234,8 @@ We perform the same cleanup operation for the following list (we make sure that 
         // Add the new chapters to the generatedChapters array
         console.log("Incoming Data:", data)
         this.generatedChapters = [];
-        let fullText = `\nChapter ${this.selectedChapters.length+1}.`
-        fullText += data.choices[0].text
+        let fullText = data.choices[0].message.content
+        
         // Split the returned text by line breaks
         fullText.split("\n").forEach(chapter => {
           if (chapter != "") {
